@@ -5,6 +5,8 @@ use Kunnu\Dropbox\DropboxApp;
 use Kunnu\Dropbox\DropboxClient;
 use Kunnu\Dropbox\DropboxRequest;
 use Kunnu\Dropbox\Security\RandomStringGeneratorInterface;
+use GuzzleHttp\Psr7\Stream;
+
 
 class OAuth2Client
 {
@@ -22,6 +24,14 @@ class OAuth2Client
      * @const string
      */
     const AUTH_TOKEN_URL = "https://api.dropboxapi.com/oauth2/token";
+
+    /**
+     * Auth Token from oauth1 URL
+     *
+     * @const string
+     */
+    const AUTH_TOKEN_FROM_OAUTH1_URL = "https://api.dropboxapi.com/2/auth/token/from_oauth1";
+
 
     /**
      * The Dropbox App
@@ -160,6 +170,44 @@ class OAuth2Client
         //and return
         return json_decode((string) $body, true);
     }
+
+    /**
+     * Get Access Token
+     *
+     * @param  string $code        Authorization Code
+     * @param  string $redirectUri Redirect URI used while getAuthorizationUrl
+     * @param  string $grant_type  Grant Type ['authorization_code']
+     *
+     * @return array
+     */
+    public function getAccessTokenFromOauth1($oauth1_token,$oauth1_token_secret)
+    {
+        //Request Params
+        $params = [
+        	'oauth1_token' => $oauth1_token,
+        	'oauth1_token_secret' => $oauth1_token_secret,
+        ];
+
+        $uri = static::AUTH_TOKEN_FROM_OAUTH1_URL;
+
+		$accessToken = base64_encode( $this->getApp()->getClientId() . ':' . $this->getApp()->getClientSecret() );
+
+		$appAuthenticationHeader = ['Authorization' => 'basic '. $accessToken];
+
+        //Send Request through the DropboxClient
+        //Fetch the Response (DropboxRawResponse)
+        $response = $this->getClient()
+        ->getHttpClient()
+        ->send($uri, "POST", null, $appAuthenticationHeader, array( 'json' => $params ) );
+
+        //Fetch Response Body
+        $body = $response->getBody();
+
+        //Decode the Response body to associative array
+        //and return
+        return json_decode((string) $body, true);
+    }
+
 
     /**
      * Disables the access token
